@@ -1,4 +1,4 @@
-# Pokemon TCG Profit Tool
+﻿# Pokemon TCG Profit Tool
 
 ## Description
 Outil SaaS pour identifier et profiter des opportunités de revente Pokemon TCG.
