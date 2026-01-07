@@ -105,10 +105,27 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 6. Execute implementation following the task plan:
    - **Phase-by-phase execution**: Complete each phase before moving to the next
-   - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
+   - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together
    - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
    - **File-based coordination**: Tasks affecting the same files must run sequentially
    - **Validation checkpoints**: Verify each phase completion before proceeding
+
+   **Automatic Agent Dispatch** - Use the Task tool with the appropriate `subagent_type` based on task content:
+
+   | Task Pattern | Agent | Trigger Keywords |
+   |--------------|-------|------------------|
+   | Scraping | `scraper-builder` | eBay, Vinted, CardMarket, scraper, crawler, colly, chromedp, data analysis, ROI |
+   | Discord | `discord-builder` | discord, bot, webhook, notification, alert, slash command |
+   | Background Jobs | `worker-builder` | worker, job, scheduler, periodic, cron, queue |
+   | Bug Fixes | `debugger` | fix, bug, error, failing test, debug, issue |
+   | Code Review | `code-reviewer` | After completing any significant implementation task |
+
+   **Dispatch Rules**:
+   - Analyze each task description before execution
+   - If task matches a pattern above, dispatch to that agent via Task tool
+   - For complex tasks matching multiple patterns, use primary pattern (scraper > worker > debugger)
+   - Always run `code-reviewer` after completing a phase with significant new code
+   - Pass full task context and relevant file paths to the agent
 
 7. Implementation execution rules:
    - **Setup first**: Initialize project structure, dependencies, configuration

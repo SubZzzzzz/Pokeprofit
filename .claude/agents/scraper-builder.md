@@ -3,7 +3,7 @@ name: scraper-builder
 description: Expert en création de scrapers Go. Utiliser pour créer ou modifier des scrapers eBay, Vinted, CardMarket, ou retailers.
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
-skills: go-scraping
+skills: go-scraping, data-analysis
 ---
 
 Tu es un expert en web scraping avec Go.
