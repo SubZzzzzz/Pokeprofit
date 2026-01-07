@@ -1,21 +1,17 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version Change: 2.0.0 → 3.0.0
-Rationale: MAJOR - Suppression complète du Module 1 (Data Tracker).
-Approche simplifiée: watchlist manuelle → Restock Monitor.
+Version Change: 3.0.0 → 3.1.0
+Rationale: MINOR - Ajout du prix de revente estimé dans la watchlist
+pour calcul ROI dans les alertes restock.
 
-Modified Principles:
-- Principe I "Data-Driven" → Reformulé: focus sur données retailers, pas marketplaces
+Modified Sections:
+- Watchlist: ajout champ "prix revente estimé" par produit
+- Alertes restock: affichent maintenant le profit estimé
 
-Removed Sections:
-- Module 1: Data Tracker (scrapers eBay/Vinted pour ventes)
-- Commandes /sales et /trending
-- Scrapers marketplace (eBay FR, Vinted)
-
-Added Sections:
-- Watchlist manuelle comme source de produits à surveiller
-- Module 1 devient Restock Monitor (anciennement Module 2)
+Added Features:
+- Prix revente configurable par produit dans watchlist
+- Calcul ROI automatique dans alertes (retail vs revente)
 
 Templates Status:
 ✅ .specify/templates/plan-template.md - compatible
@@ -23,7 +19,7 @@ Templates Status:
 ✅ .specify/templates/tasks-template.md - compatible
 
 Follow-up TODOs:
-- Définir format de la watchlist (JSON, Discord command, etc.)
+- None
 -->
 
 # PokéProfit Constitution
@@ -116,34 +112,53 @@ Les scrapers doivent être robustes. Une alerte manquée = argent perdu pour l'u
 
 ### Watchlist (Source de données)
 
-**But:** Liste des produits à surveiller, maintenue par l'utilisateur
+**But:** Liste des produits à surveiller, maintenue par l'utilisateur avec prix de revente estimé
 
 **Fonctionnement:**
 
 - L'utilisateur ajoute/retire des produits via commandes Discord
-- Chaque produit = nom + URLs retailers à surveiller
+- Chaque produit = nom + URLs retailers + prix de revente estimé
+- Le prix de revente permet de calculer le ROI dans les alertes
 - L'utilisateur identifie les produits rentables via sa propre recherche (eBay sold, groupes Discord, expérience)
 - L'IA peut aider à la recherche mais la décision reste humaine
 
+**Données par produit:**
+
+- Nom du produit
+- URLs des retailers à surveiller
+- Prix de revente estimé (défini par l'utilisateur)
+- Date d'ajout
+
 **Commandes:**
 
-- `/watch [nom] [url1] [url2]...` - Ajouter un produit à surveiller
+- `/watch [nom] [prix_revente] [url1] [url2]...` - Ajouter un produit avec prix revente estimé
 - `/unwatch [nom]` - Retirer un produit
-- `/watchlist` - Voir sa liste de produits surveillés
+- `/watchlist` - Voir sa liste de produits surveillés avec prix revente
+- `/setprice [nom] [prix]` - Modifier le prix revente d'un produit existant
 
-**Principe:** L'utilisateur sait ce qui est rentable. L'outil surveille, l'humain décide.
+**Principe:** L'utilisateur sait ce qui est rentable. L'outil surveille et calcule le ROI, l'humain décide.
 
 ### Module 1: Restock Monitor (CORE)
 
-**But:** Alerter quand les produits de la watchlist sont disponibles
+**But:** Alerter quand les produits de la watchlist sont disponibles, avec calcul du profit estimé
 
 **Composants:**
 
 - Scrapers pour retailers FR: Pokemon Center, FNAC, Micromania, Amazon, Cultura
-- Système d'alertes Discord avec: lien direct, prix retail, stock disponible
+- Système d'alertes Discord avec: lien direct, prix retail, prix revente, profit estimé, stock disponible
+- Calcul automatique du ROI basé sur le prix revente de la watchlist
 - Polling intelligent avec détection de changements
 
-**Principe:** Alerte = Action immédiate possible (toutes les infos nécessaires présentes)
+**Données dans l'alerte:**
+
+- Nom du produit
+- Prix retail (scrappé du retailer)
+- Prix revente estimé (de la watchlist)
+- Profit estimé en € et en %
+- Lien direct vers le produit
+- Indicateur de stock (limité/disponible)
+
+**Principe:** Alerte = Décision immédiate possible (toutes les infos ROI présentes)
 
 ### Module 2: Arbitrage Finder
 
@@ -247,9 +262,10 @@ Les monitors tournent en background et envoient des alertes automatiquement:
 
 L'utilisateur gère sa watchlist et interroge le système via des slash commands:
 
-- `/watch [nom] [urls...]` - Ajouter un produit à surveiller
+- `/watch [nom] [prix_revente] [urls...]` - Ajouter un produit avec prix revente estimé
 - `/unwatch [nom]` - Retirer un produit de la watchlist
-- `/watchlist` - Voir tous les produits surveillés
+- `/watchlist` - Voir tous les produits surveillés avec prix revente
+- `/setprice [nom] [prix]` - Modifier le prix revente d'un produit
 - `/alerts` - Gérer ses préférences d'alertes
 - `/status` - Voir le statut des monitors
 
@@ -396,7 +412,9 @@ L'utilisateur gère sa watchlist et interroge le système via des slash commands
 ```
 🔔 RESTOCK ALERTE
 📦 Coffret Dracaufeu Ultra Premium
-💰 Prix: 119.99€ @ FNAC
+💰 Prix retail: 119.99€ @ FNAC
+📈 Prix revente: 180€ (ton estimation)
+✨ Profit estimé: +60€ (+50%)
 🔗 [Acheter maintenant](lien)
 ⏰ Stock limité détecté
 ```
@@ -407,12 +425,15 @@ L'utilisateur gère sa watchlist et interroge le système via des slash commands
 📋 Ta Watchlist (3 produits)
 
 1. Coffret Dracaufeu UPC
+   💰 Revente: 180€
    → FNAC, Pokemon Center, Amazon
 
 2. ETB Ecarlate et Violet
+   💰 Revente: 65€
    → Micromania, Cultura
 
 3. Display 151 JAP
+   💰 Revente: 140€
    → Pokemon Center
 ```
 
@@ -470,4 +491,4 @@ Voir `.specify/templates/plan-template.md` pour guidance d'implémentation. Tout
 
 **Constitution supersedes all other practices.** En cas de conflit entre ce document et d'autres guidelines, la Constitution prévaut.
 
-**Version**: 3.0.0 | **Ratified**: 2026-01-07 | **Last Amended**: 2026-01-07
+**Version**: 3.1.0 | **Ratified**: 2026-01-07 | **Last Amended**: 2026-01-07
