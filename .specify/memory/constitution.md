@@ -1,26 +1,31 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version Change: 1.0.0 → 1.0.1
-Rationale: Clarification Discord comme UI principale (commandes + notifications automatiques)
+Version Change: 1.0.1 → 2.0.0
+Rationale: MAJOR - Retrait du Module 1 (Volume Analyzer) et remplacement par
+Data Tracker simplifié. Changement de philosophie: automatisation complète
+vers données + analyse manuelle.
 
 Modified Principles:
-- N/A
+- Principe I "Data-Driven" → Reformulé: focus sur collecte de données, pas calculs automatisés
 
 Added Sections:
-- Interface Utilisateur (Discord-First)
+- Module 1 remplacé: "Data Tracker" (liste des ventes/restocks observées)
 
 Removed Sections:
-- N/A
+- Volume Analyzer (scrapers eBay/Vinted avec calculs ROI automatisés)
+- Scorer automatique (Volume × Marge)
+- Calculs automatisés de rentabilité
 
 Templates Status:
-✅ .specify/templates/plan-template.md - reviewed, compatible
-✅ .specify/templates/spec-template.md - reviewed, compatible
-✅ .specify/templates/tasks-template.md - reviewed, compatible
-⚠ .specify/templates/commands/*.md - no command files found in templates/commands/
+✅ .specify/templates/plan-template.md - compatible (Constitution Check générique)
+✅ .specify/templates/spec-template.md - compatible (user stories génériques)
+✅ .specify/templates/tasks-template.md - compatible (structure de phases générique)
+⚠ .specify/templates/commands/*.md - aucun fichier présent
 
 Follow-up TODOs:
-- None
+- Mettre à jour les métriques de succès Phase 1 (adapter aux nouvelles fonctions)
+- Valider avec utilisateur si d'autres modules doivent être simplifiés de manière similaire
 -->
 
 # PokéProfit Constitution
@@ -29,16 +34,16 @@ Follow-up TODOs:
 
 ### I. Data-Driven
 
-Toutes les décisions sont basées sur des données réelles du marché, pas sur des suppositions. On analyse ce qui SE VEND, pas ce qu'on PENSE qui va se vendre.
+Toutes les décisions sont basées sur des données réelles du marché. On collecte les données observables (ventes, restocks), l'analyse de rentabilité reste à la discrétion de l'utilisateur.
 
 **MUST requirements:**
 
-- Scraper les ventes complétées (eBay FR, Vinted) pour identifier les produits rentables
-- Calculer volume de ventes, prix moyen, marge vs MSRP pour chaque produit
-- Baser les recommandations uniquement sur des données mesurables et vérifiables
-- NEVER faire de recommandations basées sur des intuitions ou tendances non-vérifiées
+- Tracker les ventes complétées (eBay FR, Vinted) pour exposer les tendances
+- Tracker les restocks et disponibilités sur les retailers
+- Présenter les données de manière claire et exploitable
+- Permettre à l'utilisateur de faire ses propres analyses avec les données fournies
 
-**Rationale:** Dans le reselling, les pertes proviennent d'achats basés sur des suppositions. Seules les données de ventes réelles révèlent ce qui est effectivement rentable sur le marché actuel.
+**Rationale:** Automatiser la collecte de données est fiable et scalable. L'analyse de rentabilité dépend de critères personnels (coûts d'envoi, temps disponible, objectifs). L'utilisateur est le mieux placé pour décider ce qui est rentable pour lui.
 
 ### II. Speed Matters
 
@@ -59,10 +64,10 @@ Chaque feature doit aider l'utilisateur à gagner de l'argent. Si une feature n'
 
 **MUST requirements:**
 
-- Chaque alerte MUST inclure le calcul de ROI (prix retail vs prix marché)
 - Prioriser les features qui augmentent directement le profit utilisateur
+- Fournir les données nécessaires pour que l'utilisateur calcule son ROI
 - Rejeter les features "nice-to-have" qui ne contribuent pas au ROI
-- Mesurer le succès en euros gagnés, pas en features livrées
+- Mesurer le succès en valeur apportée à l'utilisateur
 
 **MUST NOT:**
 
@@ -74,14 +79,14 @@ Chaque feature doit aider l'utilisateur à gagner de l'argent. Si une feature n'
 
 ### IV. Simplicité
 
-L'utilisateur veut des réponses claires : "achète ça", "vends ça", "profit = X€". Pas de dashboards complexes inutiles.
+L'utilisateur veut des données claires et exploitables. Pas de dashboards complexes inutiles.
 
 **MUST requirements:**
 
-- Messages Discord concis avec les informations essentielles (produit, prix, ROI, lien)
-- Commandes simples et intuitives (`/top`, `/alerts`)
+- Messages Discord concis avec les informations essentielles
+- Commandes simples et intuitives (`/sales`, `/restocks`, `/alerts`)
 - Pas de configuration complexe requise pour obtenir de la valeur
-- Données chiffrées claires et actionnables
+- Données brutes accessibles pour analyse personnelle
 
 **MUST NOT:**
 
@@ -89,11 +94,11 @@ L'utilisateur veut des réponses claires : "achète ça", "vends ça", "profit =
 - NEVER cacher l'information essentielle derrière des clics multiples
 - NEVER utiliser du jargon technique face à l'utilisateur
 
-**Rationale:** L'utilisateur est un revendeur occupé, pas un data analyst. Il a besoin d'informations claires pour prendre des décisions rapides.
+**Rationale:** L'utilisateur est un revendeur occupé. Il a besoin d'informations claires pour prendre ses propres décisions.
 
 ### V. Fiabilité
 
-Les scrapers doivent être robustes. Une alerte manquée = argent perdu pour l'utilisateur = perte de confiance.
+Les scrapers doivent être robustes. Une donnée manquée = information incomplète = mauvaise décision potentielle.
 
 **MUST requirements:**
 
@@ -109,33 +114,35 @@ Les scrapers doivent être robustes. Une alerte manquée = argent perdu pour l'u
 - NEVER ignorer les erreurs silencieusement
 - NEVER laisser un scraper cassé sans alerte système
 
-**Rationale:** La fiabilité est la base de la confiance. Si l'outil rate des opportunités, l'utilisateur le désinstalle. Un système fiable = utilisateurs qui restent et paient.
+**Rationale:** La fiabilité est la base de la confiance. Si l'outil manque des données, l'utilisateur perd confiance. Un système fiable = utilisateurs qui restent et paient.
 
 ## Scope Fonctionnel
 
-### Module 1: Volume Analyzer (CORE)
+### Module 1: Data Tracker (CORE)
 
-**But:** Identifier les produits rentables via l'analyse des ventes réelles
+**But:** Collecter et exposer les données de marché pour analyse manuelle par l'utilisateur
 
 **Composants:**
 
-- Scraper eBay FR (ventes complétées)
-- Scraper Vinted (ventes complétées)
-- Calculateur: volume de ventes, prix moyen, marge vs MSRP
-- Scorer: Volume × Marge = Score rentabilité
-- Discord bot command: `/top` pour exposer les top produits
+- Scraper eBay FR (ventes complétées) - expose: produit, prix vendu, date
+- Scraper Vinted (ventes complétées) - expose: produit, prix vendu, date
+- Database stockant l'historique des ventes observées
+- Discord bot command: `/sales [produit]` pour voir l'historique des ventes
+- Discord bot command: `/trending` pour voir les produits avec le plus de ventes récentes
 
-**Principe:** Le marché nous dit ce qui est rentable, on ne devine pas.
+**Principe:** On collecte les données, l'utilisateur analyse. Flexibilité maximale, complexité minimale.
+
+**Pourquoi ce changement:** Le Volume Analyzer automatisé était trop rigide - les critères de rentabilité varient selon chaque revendeur (frais, localisation, temps). Exposer les données brutes permet à chacun d'appliquer ses propres critères.
 
 ### Module 2: Restock Monitor
 
-**But:** Alerter quand les produits rentables sont disponibles
+**But:** Alerter quand les produits sont disponibles chez les retailers
 
 **Composants:**
 
 - Moniteurs pour retailers FR: Pokemon Center, FNAC, Micromania, Amazon, Cultura
-- Intégration avec Module 1 pour calculer ROI par produit
-- Système d'alertes Discord avec: lien direct, prix, ROI calculé, stock disponible
+- Système d'alertes Discord avec: lien direct, prix retail, stock disponible
+- Configuration utilisateur: quels produits surveiller
 
 **Principe:** Alerte = Action immédiate possible (toutes les infos nécessaires présentes)
 
@@ -176,8 +183,8 @@ Les scrapers doivent être robustes. Une alerte manquée = argent perdu pour l'u
 
 **Tiers:**
 
-- **Free:** Accès limité aux top 5 produits, 3 alertes/jour
-- **Pro (15€/mois):** Accès complet Volume Analyzer + Restock Monitor, alertes illimitées
+- **Free:** Accès limité aux données récentes (7 jours), 3 alertes restock/jour
+- **Pro (15€/mois):** Historique complet + Restock Monitor illimité
 - **Business (35€/mois):** Tout Pro + Arbitrage Finder + Spike Detector + alertes prioritaires
 
 ## Contraintes Techniques
@@ -214,7 +221,7 @@ Les scrapers doivent être robustes. Une alerte manquée = argent perdu pour l'u
 
 - Alertes envoyées < 30 secondes après détection
 - Support 1000+ produits monitorés simultanément
-- Refresh des données Volume Analyzer toutes les 24h minimum
+- Refresh des données sales tracker toutes les 24h minimum
 - API Discord répondant en < 500ms
 - Database queries optimisées (indexes, no N+1)
 
@@ -234,7 +241,7 @@ Discord est l'interface utilisateur principale et UNIQUE du projet. Pas de web a
 
 Les monitors tournent en background et envoient des alertes automatiquement quand un événement est détecté:
 
-- **Restock Monitor:** Alerte automatique quand un produit rentable est de nouveau en stock
+- **Restock Monitor:** Alerte automatique quand un produit surveillé est de nouveau en stock
 - **Spike Detector:** Alerte automatique quand une carte voit son prix augmenter significativement
 - **Arbitrage Finder:** Alerte automatique quand une opportunité d'arbitrage est détectée
 
@@ -242,10 +249,11 @@ Les monitors tournent en background et envoient des alertes automatiquement quan
 
 L'utilisateur peut interroger le système à la demande via des slash commands:
 
-- `/top` - Afficher les produits les plus rentables du moment
+- `/sales [produit]` - Voir l'historique des ventes pour un produit donné
+- `/trending` - Voir les produits avec le plus de ventes récentes
 - `/alerts` - Gérer ses préférences d'alertes
-- `/stats` - Voir ses statistiques personnelles (ROI réalisé, alertes reçues)
-- `/recap` - Obtenir un récapitulatif des opportunités récentes
+- `/watchlist` - Gérer sa liste de produits à surveiller
+- `/stats` - Voir ses statistiques personnelles
 
 ### Pourquoi Discord-First
 
@@ -278,11 +286,11 @@ L'utilisateur peut interroger le système à la demande via des slash commands:
 
 ### Timeline
 
-- **Phase 1 MVP (Volume Analyzer):** 3-4 semaines
+- **Phase 1 MVP (Data Tracker):** 2-3 semaines
 - **Phase 2 (Restock Monitor):** 3-4 semaines
-- **Phase 1+2 total:** 2-3 mois pour MVP complet
+- **Phase 1+2 total:** 6-8 semaines pour MVP complet
 - **Phase 3-4:** 2-3 mois additionnels
-- **Phase 5 (Web Dashboard):** 2-3 mois
+- **Phase 5 (Monétisation):** 2-3 mois
 
 ### Validation
 
@@ -290,7 +298,7 @@ L'utilisateur peut interroger le système à la demande via des slash commands:
 
 - L'outil doit d'abord être utile au créateur lui-même (dogfooding)
 - Validation avec 5-10 beta users avant monétisation
-- ROI prouvé sur données réelles avant scaling
+- Valeur prouvée sur données réelles avant scaling
 
 ### Croissance
 
@@ -308,23 +316,25 @@ L'utilisateur peut interroger le système à la demande via des slash commands:
 - Outil pour cartes gradées (PSA, BGS, etc.) - focus sealed products uniquement
 - Outil US-first (focus France/Europe)
 - Service de prédiction IA des prix futurs (data-driven seulement)
+- Calculateur de rentabilité automatisé (l'utilisateur fait ses propres analyses)
 
-**Rationale:** Rester focus sur la mission core = alertes intelligentes pour maximiser ROI. Éviter la feature creep qui dilue la valeur.
+**Rationale:** Rester focus sur la mission core = données fiables + alertes rapides. L'utilisateur garde le contrôle sur l'analyse et les décisions.
 
 ## Métriques de Succès
 
-### Phase 1 (MVP - Volume Analyzer)
+### Phase 1 (MVP - Data Tracker)
 
-- Identifier 10+ produits rentables par semaine
-- Taux de précision ROI > 80% (prédictions vs résultats réels)
+- Tracker 50+ produits avec historique de ventes
+- Données mises à jour quotidiennement
 - 5 beta users utilisent l'outil activement
+- Commande `/sales` répond en < 2 secondes
 
 ### Phase 2 (Restock Monitor)
 
 - Latence alerte < 30 secondes (p95)
 - 0 faux positifs par semaine (alertes stock erronées)
 - 10+ beta users utilisent les alertes
-- Conversion alerte → achat > 20%
+- Utilisateurs déclarent avoir profité d'au moins 1 restock grâce aux alertes
 
 ### Phase 3 (Monétisation)
 
@@ -337,26 +347,26 @@ L'utilisateur peut interroger le système à la demande via des slash commands:
 
 - 200+ utilisateurs payants
 - MRR > 3000€
-- Taux de précision ROI maintenu > 80%
-- Feature requests alignées avec ROI First principle
+- Données fiables maintenues (< 5% erreurs rapportées)
+- Feature requests alignées avec principes de simplicité
 
 ## Roadmap Simplifiée
 
-**Phase 1: Volume Analyzer** (3-4 semaines)
-→ Savoir QUOI acheter
+**Phase 1: Data Tracker** (2-3 semaines)
+→ Exposer les données de marché
 
-- Scrapers eBay FR + Vinted
-- Database schema + calculateurs
-- Discord bot `/top` command
-- **Deliverable:** Liste des top produits rentables mise à jour quotidiennement
+- Scrapers eBay FR + Vinted (ventes complétées)
+- Database schema pour stocker historique
+- Discord bot `/sales` et `/trending` commands
+- **Deliverable:** Historique des ventes accessible via Discord
 
 **Phase 2: Restock Monitor** (3-4 semaines)
 → Savoir QUAND acheter
 
 - Scrapers retailers FR (Pokemon Center, FNAC, Micromania, Amazon, Cultura)
 - Système d'alertes Discord
-- Intégration ROI avec Volume Analyzer
-- **Deliverable:** Alertes temps réel pour restocks de produits rentables
+- Watchlist utilisateur
+- **Deliverable:** Alertes temps réel pour restocks
 
 **Phase 3: Arbitrage Finder** (4-6 semaines)
 → Nouvelles opportunités de profit
@@ -374,10 +384,9 @@ L'utilisateur peut interroger le système à la demande via des slash commands:
 - Alertes spikes avec contexte
 - **Deliverable:** Alertes sur hausses de prix significatives
 
-**Phase 5: Dashboard Web + Scale** (8-12 semaines)
-→ Monétisation et croissance
+**Phase 5: Monétisation + Scale** (8-12 semaines)
+→ Revenus récurrents
 
-- Interface web pour configuration
 - Système de paiement Stripe
 - Feature gating par tier
 - Analytics utilisateur
@@ -390,34 +399,42 @@ L'utilisateur peut interroger le système à la demande via des slash commands:
 **MUST:**
 
 - Messages concis (< 280 caractères idéalement)
-- Emojis pour lisibilité (📈 profit, 🔔 alerte, 💰 ROI)
-- Données chiffrées précises (prix en €, ROI en %, volume en unités)
+- Emojis pour lisibilité (📊 data, 🔔 alerte, 📦 restock)
+- Données chiffrées précises (prix en €, quantités, dates)
 - Call-to-action clair (lien direct vers produit)
 
-**Exemple d'alerte:**
+**Exemple d'alerte restock:**
 
 ```
 🔔 RESTOCK ALERTE
 📦 Coffret Dracaufeu Ultra Premium
-💰 Prix: 119.99€ | Vente moyenne: 179€
-📈 ROI estimé: +49% (59€ profit)
+💰 Prix: 119.99€ @ FNAC
 🔗 [Acheter maintenant](lien)
 ⏰ Stock limité détecté
+```
+
+**Exemple de données sales:**
+
+```
+📊 VENTES: Coffret Dracaufeu UPC
+Dernières 7 jours:
+- eBay: 15 ventes, 145€-185€ (moy: 168€)
+- Vinted: 8 ventes, 135€-160€ (moy: 148€)
 ```
 
 ### Communication Générale
 
 **MUST:**
 
-- Pas de bullshit: ROI réel basé sur données, pas de promesses exagérées
-- Transparence: Si une alerte était fausse, l'admettre et corriger
+- Pas de bullshit: données réelles, pas de promesses exagérées
+- Transparence: Si des données sont manquantes, l'indiquer
 - Communautaire: Écouter feedback beta users, itérer rapidement
 - Français par défaut (marché FR/EU)
 
 **MUST NOT:**
 
 - NEVER promettre des gains garantis
-- NEVER cacher les risques du reselling
+- NEVER cacher les limites de l'outil
 - NEVER ignorer les bugs rapportés par utilisateurs
 
 ## Governance
@@ -443,7 +460,7 @@ L'utilisateur peut interroger le système à la demande via des slash commands:
 **MUST requirements:**
 
 - Toute nouvelle feature MUST être validée contre les 5 principes
-- Toute PR MUST vérifier alignement avec ROI First
+- Toute PR MUST vérifier alignement avec Simplicité
 - Code reviews MUST valider la simplicité (principe IV)
 - Déploiements MUST valider la fiabilité (principe V)
 - Metrics MUST être trackées selon "Métriques de Succès"
@@ -460,4 +477,4 @@ Voir `.specify/templates/plan-template.md` pour guidance d'implémentation. Tout
 
 **Constitution supersedes all other practices.** En cas de conflit entre ce document et d'autres guidelines, la Constitution prévaut.
 
-**Version**: 1.0.1 | **Ratified**: 2026-01-07 | **Last Amended**: 2026-01-07
+**Version**: 2.0.0 | **Ratified**: 2026-01-07 | **Last Amended**: 2026-01-07
