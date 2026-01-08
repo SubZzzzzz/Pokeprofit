@@ -1,22 +1,36 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version Change: 3.0.0 → 3.1.0
-Rationale: MINOR - Ajout du prix de revente estimé dans la watchlist
-pour calcul ROI dans les alertes restock.
+Version Change: 3.1.0 → 4.0.0
+Rationale: MAJOR - Refonte complète du projet. Nouveau scope (flip C2C vs restock retail),
+nouveaux principes, nouvelle architecture modulaire.
 
-Modified Sections:
-- Watchlist: ajout champ "prix revente estimé" par produit
-- Alertes restock: affichent maintenant le profit estimé
+Modified Principles:
+- "Data-Driven" → supprimé (remplacé par approche modulaire)
+- "Speed Matters" → "Speed First" (même concept, seuil 1min vs 30s)
+- "ROI First" → "Low False Positives" (focus qualité alertes)
+- "Simplicité" → "Discord-Native" (même esprit, plus précis)
+- "Fiabilité" → "Scraping Resilient" (focus anti-bot)
+- NEW: "Modular Architecture"
 
-Added Features:
-- Prix revente configurable par produit dans watchlist
-- Calcul ROI automatique dans alertes (retail vs revente)
+Removed Sections:
+- Watchlist (remplacé par scanning automatique)
+- Restock Monitor (plus de retail monitoring)
+- Spike Detector (cartes singles via autre approche)
+- Monétisation (déplacé hors scope MVP)
+
+Added Sections:
+- Listing Scanner
+- Cross-Platform Arbitrage
+- Bundle/Lot Analyzer (avec IA Vision)
+- Facebook Groups Monitor
+- Grading ROI Calculator
+- Plateformes cibles et références prix
 
 Templates Status:
-✅ .specify/templates/plan-template.md - compatible
-✅ .specify/templates/spec-template.md - compatible
-✅ .specify/templates/tasks-template.md - compatible
+✅ .specify/templates/plan-template.md - compatible (générique)
+✅ .specify/templates/spec-template.md - compatible (générique)
+✅ .specify/templates/tasks-template.md - compatible (générique)
 
 Follow-up TODOs:
 - None
@@ -24,471 +38,325 @@ Follow-up TODOs:
 
 # PokéProfit Constitution
 
+## Mission
+
+Outil SaaS pour détecter les opportunités de flip/revente de cartes Pokémon TCG sur les marketplaces C2C (Vinted, LeBonCoin). L'outil scanne automatiquement les nouvelles annonces, identifie les deals rentables, et alerte l'utilisateur en temps réel.
+
 ## Core Principles
 
-### I. Data-Driven
+### I. Speed First
 
-Toutes les décisions sont basées sur des données réelles. L'utilisateur identifie les produits rentables via sa propre recherche, l'outil surveille leur disponibilité.
-
-**MUST requirements:**
-
-- Surveiller les retailers pour détecter les restocks en temps réel
-- Fournir des données précises (prix, disponibilité, lien direct)
-- Permettre à l'utilisateur de gérer sa watchlist de produits
-
-**Rationale:** Le matching automatique entre listings marketplace est trop complexe et peu fiable. L'utilisateur connaît mieux que quiconque les produits qu'il veut surveiller. On se concentre sur ce qu'on fait bien : détecter les restocks rapidement.
-
-### II. Speed Matters
-
-Dans le reselling, la vitesse est critique. Les alertes doivent arriver en secondes, pas en minutes. Premier arrivé = premier servi.
+Les alertes MUST arriver en moins d'1 minute après la publication d'une annonce. La vitesse est l'avantage compétitif principal - premier arrivé, premier servi.
 
 **MUST requirements:**
 
-- Alertes envoyées en moins de 30 secondes après détection d'un restock
-- Architecture conçue pour la performance (Go, concurrence native)
-- Monitoring en temps réel des retailers (pas de polling lent)
-- Support de 1000+ produits monitorés simultanément
-
-**Rationale:** Les produits Pokemon à forte demande se vendent en minutes. Une alerte en retard = opportunité perdue = argent perdu pour l'utilisateur.
-
-### III. ROI First
-
-Chaque feature doit aider l'utilisateur à gagner de l'argent. Si une feature n'améliore pas le ROI, elle n'a pas sa place.
-
-**MUST requirements:**
-
-- Prioriser les features qui augmentent directement le profit utilisateur
-- Rejeter les features "nice-to-have" qui ne contribuent pas au ROI
-- Mesurer le succès en valeur apportée à l'utilisateur
+- Latence maximale de 60 secondes entre publication et alerte (p95)
+- Polling agressif des plateformes (dans les limites du rate limiting)
+- Architecture optimisée pour la latence (Go, concurrence native)
+- Priorisation des annonces récentes dans le pipeline
 
 **MUST NOT:**
 
-- NEVER implémenter des features purement esthétiques
-- NEVER créer des dashboards complexes sans valeur actionnable
-- NEVER ajouter de la complexité qui n'améliore pas les profits
+- NEVER batching des alertes (envoyer immédiatement)
+- NEVER délai artificiel pour "grouper" les notifications
+- NEVER sacrifier la vitesse pour des features non-essentielles
 
-**Rationale:** Les utilisateurs paient pour gagner de l'argent, pas pour des interfaces jolies. Chaque euro de développement doit générer des euros de profit utilisateur.
+**Rationale:** Sur Vinted/LBC, les bons deals partent en minutes. Une alerte en retard = opportunité perdue. La vitesse est THE differentiator.
 
-### IV. Simplicité
+### II. Low False Positives
 
-L'utilisateur veut des alertes claires et actionnables. Pas de complexité inutile.
-
-**MUST requirements:**
-
-- Messages Discord concis avec les informations essentielles
-- Commandes simples et intuitives (`/watch`, `/unwatch`, `/alerts`)
-- Watchlist facile à gérer
-- Pas de configuration complexe requise
-
-**MUST NOT:**
-
-- NEVER créer des interfaces nécessitant une formation
-- NEVER cacher l'information essentielle derrière des clics multiples
-- NEVER utiliser du jargon technique face à l'utilisateur
-
-**Rationale:** L'utilisateur est un revendeur occupé. Il a besoin d'alertes claires pour agir rapidement.
-
-### V. Fiabilité
-
-Les scrapers doivent être robustes. Une alerte manquée = argent perdu pour l'utilisateur = perte de confiance.
+Mieux vaut rater une opportunité que d'alerter sur un mauvais deal. Chaque alerte MUST représenter une vraie opportunité de profit.
 
 **MUST requirements:**
 
-- Scrapers avec retry logic et backoff exponentiel
-- Proxies rotatifs pour éviter les bans
-- Logs détaillés pour debug et monitoring
-- Alertes de santé système (scraper down, API error, etc.)
-- Tests d'intégration pour valider les scrapers régulièrement
+- Seuil minimum de 30% de marge brute avant alerte
+- Validation croisée des prix avec références (CardMarket, TCGPlayer)
+- Scoring de confiance sur chaque deal détecté
+- Filtrage des annonces suspectes (scams, fakes, erreurs de catégorie)
 
 **MUST NOT:**
 
-- NEVER déployer un scraper sans tests de robustesse
-- NEVER ignorer les erreurs silencieusement
-- NEVER laisser un scraper cassé sans alerte système
+- NEVER alerter sous 30% de marge estimée
+- NEVER alerter sans prix de référence validé
+- NEVER flood l'utilisateur avec des alertes marginales
 
-**Rationale:** La fiabilité est la base de la confiance. Si l'outil rate des opportunités, l'utilisateur le désinstalle. Un système fiable = utilisateurs qui restent et paient.
+**Rationale:** Un utilisateur qui reçoit 50 alertes/jour dont 2 sont bonnes va désactiver l'outil. Qualité > Quantité. Confiance = rétention.
+
+### III. Scraping Resilient
+
+Les scrapers MUST gérer les protections anti-bot et rester opérationnels malgré les obstacles techniques.
+
+**MUST requirements:**
+
+- Retry logic avec backoff exponentiel (1s, 2s, 4s, 8s, 16s, max 60s)
+- Rotation de proxies résidentiels pour distribuer les requêtes
+- Rotation de User-Agents et fingerprints browser
+- Fallback strategies (API officielle si dispo, mobile endpoints, etc.)
+- Circuit breaker pour éviter les bans prolongés
+- Health monitoring avec alertes si scraper down > 5 minutes
+
+**MUST NOT:**
+
+- NEVER requêtes sans proxy sur sites protégés
+- NEVER ignorer les erreurs 429/403 (adapter immédiatement)
+- NEVER continuer si détection de captcha sans stratégie
+
+**Rationale:** Vinted et LBC ont des protections Cloudflare/DataDome. Un scraper qui tombe = revenus perdus. La résilience n'est pas optionnelle.
+
+### IV. Modular Architecture
+
+Chaque module MUST être indépendant et activable séparément. Un utilisateur peut choisir exactement les features qu'il veut.
+
+**MUST requirements:**
+
+- Chaque module = package Go isolé avec interface claire
+- Configuration par module (enable/disable, seuils, filtres)
+- Pas de dépendances croisées entre modules métier
+- Un module down ne MUST pas impacter les autres
+- Feature flags pour activation granulaire
+
+**MUST NOT:**
+
+- NEVER couplage fort entre modules
+- NEVER config globale qui force tous les modules
+- NEVER déploiement monolithique obligatoire
+
+**Rationale:** Différents utilisateurs ont différents besoins. Un flipper de lots n'a pas besoin du grading calculator. Modularité = flexibilité = plus de clients satisfaits.
+
+### V. Discord-Native
+
+Toutes les interactions utilisateur MUST passer par Discord. Pas de web UI pour le MVP.
+
+**MUST requirements:**
+
+- Alertes via messages Discord (embed rich avec images)
+- Configuration via slash commands (`/config`, `/filters`, `/alerts`)
+- Statut système visible via commandes (`/status`, `/health`)
+- Support multi-serveurs (un bot, plusieurs guilds)
+
+**MUST NOT:**
+
+- NEVER créer de web dashboard pour le MVP
+- NEVER forcer l'utilisateur hors de Discord
+- NEVER alertes par email ou SMS
+
+**Rationale:** Les flippers Pokemon sont déjà sur Discord. Zéro friction = meilleure adoption. Web UI = scope creep pour le MVP.
 
 ## Scope Fonctionnel
 
-### Watchlist (Source de données)
+### Plateformes Cibles (Phase 1)
 
-**But:** Liste des produits à surveiller, maintenue par l'utilisateur avec prix de revente estimé
+**Scan (sources d'annonces):**
+- Vinted FR
+- LeBonCoin FR
+
+**Référence Prix:**
+- CardMarket (prix marché EU)
+- TCGPlayer (prix marché US, conversion)
+
+### Module 1: Listing Scanner (CORE)
+
+**But:** Scanner les nouvelles annonces et détecter les deals via keywords, fautes d'orthographe, et price crashes.
+
+**Stratégies de détection:**
+
+1. **Keyword Matching**
+   - Noms de sets (151, Écarlate et Violet, etc.)
+   - Noms de cartes populaires (Dracaufeu, Pikachu, etc.)
+   - Termes de valeur (PSA, BGS, sealed, display, ETB)
+
+2. **Typo Detection**
+   - Fautes courantes (Dracofeu, Pikatchou, etc.)
+   - Erreurs de set (152 au lieu de 151)
+   - Mauvaise catégorisation (jeux vidéo au lieu de cartes)
+
+3. **Price Crash Detection**
+   - Prix < 50% du prix marché → alerte haute priorité
+   - Prix < 70% du prix marché → alerte normale
+
+**Output:** Alerte Discord avec lien, prix, marge estimée, confiance.
+
+### Module 2: Cross-Platform Arbitrage
+
+**But:** Détecter les différences de prix entre Vinted et LBC pour le même produit.
 
 **Fonctionnement:**
+- Matching de produits similaires entre plateformes
+- Calcul de marge nette (prix vente - prix achat - frais)
+- Alerte si arbitrage > seuil configuré
 
-- L'utilisateur ajoute/retire des produits via commandes Discord
-- Chaque produit = nom + URLs retailers + prix de revente estimé
-- Le prix de revente permet de calculer le ROI dans les alertes
-- L'utilisateur identifie les produits rentables via sa propre recherche (eBay sold, groupes Discord, expérience)
-- L'IA peut aider à la recherche mais la décision reste humaine
+**Complexité:** Moyenne (matching produits approximatif)
 
-**Données par produit:**
+### Module 3: Bundle/Lot Analyzer
 
-- Nom du produit
-- URLs des retailers à surveiller
-- Prix de revente estimé (défini par l'utilisateur)
-- Date d'ajout
-
-**Commandes:**
-
-- `/watch [nom] [prix_revente] [url1] [url2]...` - Ajouter un produit avec prix revente estimé
-- `/unwatch [nom]` - Retirer un produit
-- `/watchlist` - Voir sa liste de produits surveillés avec prix revente
-- `/setprice [nom] [prix]` - Modifier le prix revente d'un produit existant
-
-**Principe:** L'utilisateur sait ce qui est rentable. L'outil surveille et calcule le ROI, l'humain décide.
-
-### Module 1: Restock Monitor (CORE)
-
-**But:** Alerter quand les produits de la watchlist sont disponibles, avec calcul du profit estimé
+**But:** Analyser les lots de cartes pour estimer leur valeur réelle vs prix demandé.
 
 **Composants:**
 
-- Scrapers pour retailers FR: Pokemon Center, FNAC, Micromania, Amazon, Cultura
-- Système d'alertes Discord avec: lien direct, prix retail, prix revente, profit estimé, stock disponible
-- Calcul automatique du ROI basé sur le prix revente de la watchlist
-- Polling intelligent avec détection de changements
+1. **Analyse Texte**
+   - Extraction des cartes mentionnées dans la description
+   - Parsing des listes (quantités, sets, conditions)
 
-**Données dans l'alerte:**
+2. **Analyse Vision (Claude API)**
+   - Upload des photos de lots vers Claude Vision
+   - Identification des cartes visibles
+   - Estimation de valeur basée sur les cartes détectées
 
-- Nom du produit
-- Prix retail (scrappé du retailer)
-- Prix revente estimé (de la watchlist)
-- Profit estimé en € et en %
-- Lien direct vers le produit
-- Indicateur de stock (limité/disponible)
+**Output:** Valeur estimée du lot, marge potentielle, liste des cartes identifiées.
 
-**Principe:** Alerte = Décision immédiate possible (toutes les infos ROI présentes)
+### Module 4: Facebook Groups Monitor
 
-### Module 2: Arbitrage Finder
+**But:** Scanner les groupes Facebook de vente Pokemon pour deals.
 
-**But:** Détecter les différences de prix entre plateformes
+**Complexité:** Haute (auth Facebook, scraping difficile)
 
-**Composants:**
+**Phase:** 2+ (pas MVP)
 
-- Comparateur de prix: CardMarket vs eBay vs Vinted
-- Calculateur de profit net après frais (commissions, shipping)
-- Alertes quand opportunité > seuil défini (configurable par tier)
+### Module 5: Grading ROI Calculator
 
-**Principe:** Arbitrage = profit quasi sans risque si bien exécuté
+**But:** Calculer si une carte vaut le coût du grading (PSA/CGC).
 
-### Module 3: Spike Detector
+**Inputs:**
+- Prix actuel de la carte raw
+- Prix moyen gradé (PSA 9, PSA 10)
+- Coût du grading + shipping
 
-**But:** Détecter les hausses de prix anormales sur les cartes (singles)
+**Output:** ROI estimé par grade, recommandation go/no-go.
 
-**Composants:**
-
-- Tracker de prix CardMarket pour cartes populaires
-- Détecteur de variations > X% en Y heures
-- Système d'alerte avec contexte (cause probable du spike)
-
-**Principe:** Information = pouvoir (vendre avant les autres, ou acheter avant que ça monte)
-
-### Module 4: Monétisation
-
-**But:** Générer des revenus récurrents
-
-**Composants:**
-
-- Système de tiers: Free (limité), Pro (15€/mois), Business (35€/mois)
-- Intégration Stripe pour paiements
-- Feature gating par tier
-- Gestion des abonnements et renouvellements
-
-**Tiers:**
-
-- **Free:** 5 produits max dans watchlist, 3 alertes/jour
-- **Pro (15€/mois):** Watchlist illimitée, alertes illimitées, alertes prioritaires
-- **Business (35€/mois):** Tout Pro + Arbitrage Finder + Spike Detector
+**Phase:** 2+ (pas MVP)
 
 ## Contraintes Techniques
 
 ### Stack Imposé
 
-- **Backend:** Go (Golang) - performance et concurrence native pour scrapers
-- **Database:** PostgreSQL - données relationnelles (produits, watchlists, utilisateurs)
-- **Cache:** Redis - sessions utilisateur, rate limiting, cache de données fréquentes
-- **Bot:** Discord via discordgo library
-- **Scraping:** colly (sites HTML statiques), chromedp/rod (sites JavaScript)
-
-**Justification:** Go offre les performances nécessaires pour monitorer 1000+ produits avec latence < 30s. PostgreSQL + Redis assurent fiabilité et rapidité.
+| Composant | Technologie | Justification |
+|-----------|-------------|---------------|
+| Backend | Go | Performance, concurrence native |
+| Scraping (protégé) | Chromedp | Sites avec JS/Cloudflare |
+| Scraping (simple) | Colly | Sites HTML statiques |
+| Database | PostgreSQL | Données relationnelles |
+| Cache/Queue | Redis | Rate limiting, job queue |
+| Notifications | discordgo | Bot Discord natif |
+| IA Vision | Claude API | Analyse images de lots |
 
 ### Contraintes Scraping
 
-**MUST requirements:**
+**Rate Limits:**
+- Vinted: Max 1 req/2s par proxy
+- LeBonCoin: Max 1 req/3s par proxy
+- CardMarket: Max 1 req/s (API ou scrape)
 
-- Respecter les rate limits pour éviter les bans (1 requête/seconde max par retailer)
-- Utiliser des proxies rotatifs pour distribuer la charge
-- Implémenter retry logic avec backoff exponentiel (2s, 4s, 8s, 16s)
-- Logs détaillés pour debug (timestamp, URL, status code, erreur)
-- User-agents rotatifs et headers réalistes
+**Proxy Requirements:**
+- Pool minimum: 50 proxies résidentiels
+- Rotation: round-robin avec health check
+- Géolocalisation: FR prioritaire
 
-**MUST NOT:**
-
-- NEVER faire plus de 1 req/s par domaine
-- NEVER ignorer les robots.txt
-- NEVER scraper sans retry logic
+**Anti-Detection:**
+- User-Agent rotation (pool de 20+ UA récents)
+- Headers réalistes (Accept-Language, etc.)
+- Delays randomisés (±20% du rate limit)
+- Session management (cookies, tokens)
 
 ### Contraintes Performance
 
-**MUST requirements:**
+| Métrique | Cible | Critique |
+|----------|-------|----------|
+| Latence alerte | < 60s (p95) | < 120s |
+| Scan throughput | 1000 annonces/min | 500/min |
+| Uptime scrapers | 99% | 95% |
+| False positive rate | < 10% | < 20% |
 
-- Alertes envoyées < 30 secondes après détection
-- Support 1000+ produits monitorés simultanément
-- API Discord répondant en < 500ms
-- Database queries optimisées (indexes, no N+1)
+## Interface Discord
 
-**Benchmarks:**
+### Alertes (Push Automatique)
 
-- Latency p95 < 30s pour alertes restock
-- Throughput: 1000 produits scannés en < 5 minutes
-- Memory usage < 512MB (base) + 1MB per 100 produits
+```
+🔥 DEAL DÉTECTÉ - Vinted
 
-## Interface Utilisateur (Discord-First)
+📦 Lot 50 cartes Pokemon 151
+💰 Prix: 25€
+📊 Valeur estimée: 80€+
+📈 Marge: +220% (~55€)
+🎯 Confiance: 85%
 
-Discord est l'interface utilisateur principale et UNIQUE du projet. Pas de web app, pas de mobile app - tout passe par Discord.
+🔗 [Voir l'annonce](lien)
+⏰ Publié il y a 45 secondes
+```
 
-### Deux modes d'interaction
+### Commandes Slash
 
-**1. Notifications Automatiques (Push)**
+| Commande | Description |
+|----------|-------------|
+| `/status` | État des scrapers et stats |
+| `/config module <name> <on/off>` | Activer/désactiver un module |
+| `/filters set <param> <value>` | Configurer les filtres |
+| `/alerts pause <duration>` | Pause temporaire des alertes |
+| `/stats [period]` | Statistiques de deals |
 
-Les monitors tournent en background et envoient des alertes automatiquement:
+## MVP Scope (Phase 1)
 
-- **Restock Monitor:** Alerte automatique quand un produit de la watchlist est de nouveau en stock
-- **Spike Detector:** Alerte automatique quand une carte voit son prix augmenter significativement
-- **Arbitrage Finder:** Alerte automatique quand une opportunité d'arbitrage est détectée
+**In Scope:**
+- Listing Scanner (Vinted + LBC)
+- Prix de référence CardMarket
+- Alertes Discord basiques
+- Configuration minimale via commands
 
-**2. Commandes Interactives (Pull)**
+**Out of Scope (Phase 2+):**
+- Cross-Platform Arbitrage
+- Bundle Analyzer avec Vision
+- Facebook Groups Monitor
+- Grading ROI Calculator
+- Web dashboard
+- Monétisation/paiements
 
-L'utilisateur gère sa watchlist et interroge le système via des slash commands:
+## Métriques de Succès
 
-- `/watch [nom] [prix_revente] [urls...]` - Ajouter un produit avec prix revente estimé
-- `/unwatch [nom]` - Retirer un produit de la watchlist
-- `/watchlist` - Voir tous les produits surveillés avec prix revente
-- `/setprice [nom] [prix]` - Modifier le prix revente d'un produit
-- `/alerts` - Gérer ses préférences d'alertes
-- `/status` - Voir le statut des monitors
+### Phase 1 (MVP)
 
-### Pourquoi Discord-First
+- [ ] 2 plateformes scannées (Vinted, LBC)
+- [ ] Latence < 60s sur 95% des alertes
+- [ ] < 10% false positives
+- [ ] 5 beta users actifs
+- [ ] Au moins 5 deals actionnés avec profit par beta user
 
-**MUST requirements:**
+### Phase 2
 
-- Toute fonctionnalité MUST être accessible via Discord (notifications ou commandes)
-- Les monitors MUST fonctionner de manière autonome sans intervention utilisateur
-- Les commandes MUST permettre de gérer la watchlist et configurer les alertes
-- L'utilisateur MUST pouvoir choisir quelles alertes il reçoit
-
-**Rationale:**
-
-- Les revendeurs Pokemon sont déjà sur Discord (communautés, groupes d'échange)
-- Pas de friction: pas d'app à installer, pas de compte à créer
-- Notifications push natives (mobile + desktop)
-- Réactivité maximale: alertes reçues instantanément là où l'utilisateur est déjà
-
-**MUST NOT:**
-
-- NEVER créer une interface web comme UI principale
-- NEVER forcer l'utilisateur à checker manuellement
-
-## Contraintes Business
-
-### Budget
-
-- **Initial:** Quelques milliers d'euros maximum
-- **Infrastructure:** Budget VPS + proxies + storage < 100€/mois initial
-- **Scaling:** Budget croît avec MRR (max 20% du MRR en infra)
-
-### Timeline
-
-- **Phase 1 MVP (Restock Monitor):** 3-4 semaines
-- **Phase 2 (Arbitrage + Spike):** 2-3 mois
-- **Phase 3 (Monétisation):** 2-3 mois
-
-### Validation
-
-**MUST requirements:**
-
-- L'outil doit d'abord être utile au créateur lui-même (dogfooding)
-- Validation avec 5-10 beta users avant monétisation
-- Valeur prouvée sur données réelles avant scaling
-
-### Croissance
-
-- **Canal principal:** Communautés Discord Pokemon FR (organiques)
-- **Stratégie:** Bouche-à-oreille via beta users satisfaits
-- **Marketing:** Pas de budget ads initial, focus qualité produit
+- [ ] Bundle Analyzer opérationnel
+- [ ] Cross-Platform Arbitrage actif
+- [ ] 20+ beta users
+- [ ] Taux de conversion deal→achat > 20%
 
 ## Ce que le projet N'EST PAS
 
 **MUST NOT implémenter:**
 
-- Bot d'achat automatique (juste des alertes pour décision humaine)
-- Outil de gestion de stock/inventaire
-- Marketplace pour acheter/vendre directement
-- Outil pour cartes gradées (PSA, BGS, etc.) - focus sealed products uniquement
-- Outil US-first (focus France/Europe)
-- Service de prédiction IA des prix futurs
-- Scraper de marketplaces (eBay, Vinted) pour analyse de ventes
-- Système de matching automatique de produits
-
-**Rationale:** Rester focus sur la mission core = alertes rapides pour restocks. L'utilisateur garde le contrôle sur la sélection des produits à surveiller.
-
-## Métriques de Succès
-
-### Phase 1 (MVP - Restock Monitor)
-
-- 5 retailers FR monitorés (Pokemon Center, FNAC, Micromania, Amazon, Cultura)
-- Latence alerte < 30 secondes (p95)
-- 0 faux positifs par semaine (alertes stock erronées)
-- 5 beta users avec watchlist active
-- Au moins 1 restock capté et actionné par beta user
-
-### Phase 2 (Arbitrage + Spike)
-
-- Arbitrage Finder détecte 5+ opportunités/semaine
-- Spike Detector alerte sur variations > 20%
-- 10+ beta users actifs
-
-### Phase 3 (Monétisation)
-
-- 50 utilisateurs payants à 6 mois du lancement
-- MRR > 500€
-- Churn rate < 10% mensuel
-- Net Promoter Score > 40
-
-### Long terme (12 mois)
-
-- 200+ utilisateurs payants
-- MRR > 3000€
-- Fiabilité maintenue (< 1% alertes manquées)
-
-## Roadmap Simplifiée
-
-**Phase 1: Restock Monitor** (3-4 semaines)
-→ Alertes de disponibilité
-
-- Système de watchlist (add/remove/list)
-- Scrapers retailers FR (Pokemon Center, FNAC, Micromania, Amazon, Cultura)
-- Système d'alertes Discord
-- **Deliverable:** Alertes temps réel pour restocks de produits surveillés
-
-**Phase 2: Arbitrage Finder** (4-6 semaines)
-→ Opportunités de profit
-
-- Comparateur de prix multi-plateformes
-- Calculateur profit net
-- Alertes arbitrage
-- **Deliverable:** Opportunités d'arbitrage quotidiennes
-
-**Phase 3: Spike Detector** (4-6 semaines)
-→ Extension aux singles
-
-- Tracker prix CardMarket
-- Détecteur de variations anormales
-- Alertes spikes avec contexte
-- **Deliverable:** Alertes sur hausses de prix significatives
-
-**Phase 4: Monétisation + Scale** (8-12 semaines)
-→ Revenus récurrents
-
-- Système de paiement Stripe
-- Feature gating par tier
-- Analytics utilisateur
-- **Deliverable:** SaaS complet avec abonnements payants
-
-## Ton et Communication
-
-### Discord (Interface Principale)
-
-**MUST:**
-
-- Messages concis (< 280 caractères idéalement)
-- Emojis pour lisibilité (🔔 alerte, 📦 restock, ✅ en stock)
-- Données précises (prix en €, lien direct)
-- Call-to-action clair
-
-**Exemple d'alerte restock:**
-
-```
-🔔 RESTOCK ALERTE
-📦 Coffret Dracaufeu Ultra Premium
-💰 Prix retail: 119.99€ @ FNAC
-📈 Prix revente: 180€ (ton estimation)
-✨ Profit estimé: +60€ (+50%)
-🔗 [Acheter maintenant](lien)
-⏰ Stock limité détecté
-```
-
-**Exemple watchlist:**
-
-```
-📋 Ta Watchlist (3 produits)
-
-1. Coffret Dracaufeu UPC
-   💰 Revente: 180€
-   → FNAC, Pokemon Center, Amazon
-
-2. ETB Ecarlate et Violet
-   💰 Revente: 65€
-   → Micromania, Cultura
-
-3. Display 151 JAP
-   💰 Revente: 140€
-   → Pokemon Center
-```
-
-### Communication Générale
-
-**MUST:**
-
-- Pas de bullshit: alertes réelles, pas de faux positifs
-- Transparence: Si un scraper est down, l'indiquer
-- Communautaire: Écouter feedback beta users, itérer rapidement
-- Français par défaut (marché FR/EU)
-
-**MUST NOT:**
-
-- NEVER promettre des gains garantis
-- NEVER cacher les limites de l'outil
-- NEVER ignorer les bugs rapportés par utilisateurs
+- Bot d'achat automatique (alertes seulement, décision humaine)
+- Marketplace intégré (on détecte, on n'achète/vend pas)
+- Gestion d'inventaire personnel
+- Prédiction IA des prix futurs
+- Scraping de retailers (focus C2C uniquement)
+- Support US/international (France only pour MVP)
 
 ## Governance
 
 ### Amendment Process
 
-1. Proposition d'amendement documentée avec justification
-2. Validation contre les 5 principes fondamentaux
-3. Review d'impact sur modules existants
-4. Mise à jour de ce document
-5. Propagation aux templates et documentation
+1. Proposition documentée avec justification
+2. Validation contre les 5 principes
+3. Impact assessment sur modules existants
+4. Mise à jour constitution + propagation templates
+5. Commit avec changelog
 
 ### Version Management
 
-**Semantic Versioning:**
-
-- **MAJOR (X.0.0):** Changement de principe fondamental ou retrait de module core
-- **MINOR (0.X.0):** Ajout de nouveau principe, module, ou contrainte significative
+- **MAJOR (X.0.0):** Changement de scope, principes, ou suppression de module core
+- **MINOR (0.X.0):** Ajout module, nouveau principe, expansion significative
 - **PATCH (0.0.X):** Clarifications, corrections, ajustements mineurs
 
 ### Compliance
 
-**MUST requirements:**
+- Toute feature MUST respecter les 5 principes
+- PR reviews MUST vérifier: vitesse, qualité alertes, résilience
+- Modules MUST être testables indépendamment
 
-- Toute nouvelle feature MUST être validée contre les 5 principes
-- Toute PR MUST vérifier alignement avec Simplicité
-- Code reviews MUST valider la simplicité (principe IV)
-- Déploiements MUST valider la fiabilité (principe V)
-
-**Review Cadence:**
-
-- Constitution review: tous les 3 mois ou après lancement de phase majeure
-- Metrics review: mensuel
-- Principles compliance: chaque PR
-
-### Development Guidance
-
-Voir `.specify/templates/plan-template.md` pour guidance d'implémentation. Toute feature doit passer par le workflow: Spec → Plan → Tasks → Implementation.
-
-**Constitution supersedes all other practices.** En cas de conflit entre ce document et d'autres guidelines, la Constitution prévaut.
-
-**Version**: 3.1.0 | **Ratified**: 2026-01-07 | **Last Amended**: 2026-01-07
+**Version**: 4.0.0 | **Ratified**: 2026-01-08 | **Last Amended**: 2026-01-08
