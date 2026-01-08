@@ -1,6 +1,6 @@
 ---
 description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
-handoffs: 
+handoffs:
   - label: Analyze For Consistency
     agent: speckit.analyze
     prompt: Run a project analysis for consistency
@@ -9,6 +9,15 @@ handoffs:
     agent: speckit.implement
     prompt: Start the implementation in phases
     send: true
+  - label: Implement Scrapers
+    agent: scraper-builder
+    prompt: Implement the scraper tasks from the task list
+  - label: Implement Deal Logic
+    agent: deal-analyzer
+    prompt: Implement the deal detection tasks from the task list
+  - label: Implement Discord Bot
+    agent: discord-bot-builder
+    prompt: Implement the Discord bot tasks from the task list
 ---
 
 ## User Input

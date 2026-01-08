@@ -1,6 +1,6 @@
 ---
 description: Execute the implementation planning workflow using the plan template to generate design artifacts.
-handoffs: 
+handoffs:
   - label: Create Tasks
     agent: speckit.tasks
     prompt: Break the plan into tasks
@@ -8,6 +8,12 @@ handoffs:
   - label: Create Checklist
     agent: speckit.checklist
     prompt: Create a checklist for the following domain...
+  - label: Research Scraping
+    agent: scraper-builder
+    prompt: Research scraping approach for...
+  - label: Research Deal Detection
+    agent: deal-analyzer
+    prompt: Design deal detection logic for...
 ---
 
 ## User Input
@@ -44,13 +50,21 @@ You **MUST** consider the user input before proceeding (if not empty).
    - For each dependency → best practices task
    - For each integration → patterns task
 
-2. **Generate and dispatch research agents**:
+2. **Dispatch to specialized agents** based on research topic:
+
+   | Topic | Agent | Use Case |
+   |-------|-------|----------|
+   | Scraping, anti-bot, Vinted, LBC | `scraper-builder` | Research scraping approach |
+   | Pricing, margins, deal detection | `deal-analyzer` | Design detection algorithm |
+   | Discord, alerts, commands | `discord-bot-builder` | Design bot architecture |
 
    ```text
-   For each unknown in Technical Context:
+   For scraping-related unknowns:
+     Use scraper-builder agent: "Research {platform} scraping for {feature}"
+   For deal/pricing unknowns:
+     Use deal-analyzer agent: "Design {detection type} for {feature}"
+   For other unknowns:
      Task: "Research {unknown} for {feature context}"
-   For each technology choice:
-     Task: "Find best practices for {tech} in {domain}"
    ```
 
 3. **Consolidate findings** in `research.md` using format:

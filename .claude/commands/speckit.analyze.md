@@ -1,5 +1,12 @@
 ---
 description: Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation.
+handoffs:
+  - label: Review Implementation
+    agent: code-reviewer
+    prompt: Review the implemented code for quality and constitution compliance
+  - label: Debug Issues
+    agent: debugger
+    prompt: Debug the following issue found during analysis...
 ---
 
 ## User Input
